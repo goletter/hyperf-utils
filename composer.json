@@ -2,9 +2,16 @@
     "name": "goletter/hyperf-utils",
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "goletter",
+            "email": "goletter@outlook.com"
+        }
+    ],
     "keywords": [
         "php",
-        "hyperf"
+        "hyperf",
+        "utils"
     ],
     "description": "Utils for Hyperf.",
     "autoload": {
@@ -37,8 +44,6 @@
         "symfony/var-dumper": "^7.2",
         "zoujingli/ip2region": "^2.0"
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "config": {
         "sort-packages": true
     },
