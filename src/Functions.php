@@ -22,7 +22,6 @@ use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\SimpleCache\CacheInterface;
-use Swoole\WebSocket\Server as WebSocketServer;
 use Ip2Region;
 
 /**
@@ -49,16 +48,6 @@ function redis()
 function server()
 {
     return di()->get(ServerFactory::class)->getServer()->getServer();
-}
-
-/**
- * WebSocketServer 实例.
- *
- * @return mixed|WebSocketServer
- */
-function websocket()
-{
-    return di()->get(WebSocketServer::class);
 }
 
 /**
