@@ -16,13 +16,19 @@ use Hyperf\Collection\Arr;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Context\RequestContext;
 use Hyperf\Contract\ConfigInterface;
+use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Redis\Redis;
 use Hyperf\Server\ServerFactory;
+use Hyperf\Snowflake\IdGeneratorInterface;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\SimpleCache\CacheInterface;
 use Ip2Region;
+use Countable;
 
 /**
  * 容器实例.
@@ -75,10 +81,58 @@ function config()
     return di()->get(ConfigInterface::class);
 }
 
+/**
+ * 控制台日志输出
+ * StdoutLogger.
+ *
+ * @throws ContainerExceptionInterface
+ * @throws NotFoundExceptionInterface
+ */
+function stdoutLogger(): StdoutLoggerInterface
+{
+    return di()->get(StdoutLoggerInterface::class);
+}
+
+/**
+ * 获取App.
+ */
 function app($className)
 {
     return di()->get($className);
 }
+
+/**
+ * 过滤数组.
+ */
+function arrayFilterFilled(array $array): array
+{
+    return array_filter($array, static fn($item) => !isBlank($item));
+}
+
+/**
+ * 是否空白.
+ */
+function isBlank(mixed $value): bool
+{
+    if (is_null($value)) {
+        return true;
+    }
+
+    if (is_string($value)) {
+        return trim($value) === '';
+    }
+
+    if (is_numeric($value) || is_bool($value)) {
+        return false;
+    }
+
+    if ($value instanceof Countable) {
+        return count($value) === 0;
+    }
+
+    return empty($value);
+}
+
 /**
  * 推送消息到 Redis 订阅中.
  * @param array|string $message
@@ -153,6 +207,19 @@ function getUserIp(string $default = ''): string
 }
 
 /**
+ * 获取真实ip.
+ */
+function realIp(mixed $request = null): string
+{
+    $request = $request ?? request();
+    /** @var RequestInterface $request */
+    return $request->getHeaderLine('X-Forwarded-For')
+        ?: $request->getHeaderLine('X-Real-IP')
+            ?: ($request->getServerParams()['remote_addr'] ?? '')
+                ?: '127.0.0.1';
+}
+
+/**
  * 解析Ip获取省市
  * @param $lastIp
  * @return array
@@ -170,4 +237,12 @@ function getRegion($lastIp): array
     }
 
     return ['province' => $province, 'city' => $city];
+}
+
+/**
+ * 雪花ID.
+ */
+function snowflakeId(): int
+{
+    return app(IdGeneratorInterface::class)->generate();
 }
