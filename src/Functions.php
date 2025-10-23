@@ -27,6 +27,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\SimpleCache\CacheInterface;
+use Hyperf\HttpServer\Router\Router;
 use Ip2Region;
 use Countable;
 
@@ -245,4 +246,19 @@ function getRegion($lastIp): array
 function snowflakeId(): int
 {
     return app(IdGeneratorInterface::class)->generate();
+}
+
+/**
+ * restful路由
+ */
+function apiResource(string $name, string $controller, array $middleware = []) {
+    $prefix = '/' . trim($name, '/');
+
+    Router::addGroup($prefix, function () use ($controller) {
+        Router::get('', [$controller, 'index']);       // GET /resource
+        Router::get('/{id}', [$controller, 'show']);   // GET /resource/{id}
+        Router::post('', [$controller, 'store']);      // POST /resource
+        Router::put('/{id}', [$controller, 'update']); // PUT /resource/{id}
+        Router::delete('/{id}', [$controller, 'destroy']); // DELETE /resource/{id}
+    }, ['middleware' => $middleware]);
 }
