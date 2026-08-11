@@ -14,12 +14,16 @@ namespace Goletter\Utils;
 
 use Hyperf\Collection\Arr;
 use Hyperf\Context\ApplicationContext;
+use Hyperf\Context\Context;
 use Hyperf\Context\RequestContext;
 use Hyperf\Contract\ConfigInterface;
 use Hyperf\Contract\StdoutLoggerInterface;
+use Hyperf\Logger\Logger;
 use Hyperf\Redis\Redis;
 use Hyperf\Server\ServerFactory;
 use Hyperf\Snowflake\IdGeneratorInterface;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\StreamHandler;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -249,6 +253,32 @@ function getRegion($lastIp): array
     }
 
     return ['province' => $province, 'city' => $city];
+}
+
+/**
+ * 日志
+ * @param array $data
+ * @param string $msg
+ * @param string $category
+ * @param int $level
+ * @return void
+ */
+function logging(array $data, string $msg = '调试', string $category = 'daily', int $level = 200): void
+{
+    $traceId = (string) Context::get('trace_id', '');
+    if ($traceId !== '') {
+        $data['trace_id'] = $traceId;
+    }
+
+    $dir = strtolower($category);
+    $log = new Logger('goletter');
+    $dateFormat = 'Y-m-d H:i:s';
+    $stream = new StreamHandler(BASE_PATH . '/runtime/logs/' . $dir . '/' . date('Y-m-d') . '.log', $level);
+    $output = "%datetime%||%channel%||%level_name%||%message%||%context%\n";
+    $formatter = new LineFormatter($output, $dateFormat);
+    $stream->setFormatter($formatter);
+    $log->pushHandler($stream);
+    $log->log($level, $msg, $data);
 }
 
 /**
