@@ -20,6 +20,11 @@ final class Di
     {
     }
 
+    /**
+     * @template T of object
+     * @param class-string<T> $id
+     * @return T
+     */
     public function get(string $id, mixed ...$parameters): mixed
     {
         /** @var callable $getter */
