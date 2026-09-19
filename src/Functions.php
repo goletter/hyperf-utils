@@ -25,7 +25,6 @@ use Hyperf\Snowflake\IdGeneratorInterface;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\RequestInterface;
@@ -37,9 +36,18 @@ use Countable;
 /**
  * 容器实例.
  */
-function di(): ContainerInterface
+function di(): Di
 {
-    return ApplicationContext::getContainer();
+    static $proxy = null;
+    static $container = null;
+
+    $current = ApplicationContext::getContainer();
+    if ($proxy === null || $container !== $current) {
+        $container = $current;
+        $proxy = new Di($current);
+    }
+
+    return $proxy;
 }
 
 /**
