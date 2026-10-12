@@ -18,12 +18,10 @@ use Hyperf\Context\Context;
 use Hyperf\Context\RequestContext;
 use Hyperf\Contract\ConfigInterface;
 use Hyperf\Contract\StdoutLoggerInterface;
-use Hyperf\Logger\Logger;
+use Hyperf\Logger\LoggerFactory;
 use Hyperf\Redis\Redis;
 use Hyperf\Server\ServerFactory;
 use Hyperf\Snowflake\IdGeneratorInterface;
-use Monolog\Formatter\LineFormatter;
-use Monolog\Handler\StreamHandler;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -277,16 +275,34 @@ function logging(array $data, string $msg = '调试', string $category = 'daily'
     if ($traceId !== '') {
         $data['trace_id'] = $traceId;
     }
+    $logger = ApplicationContext::getContainer()->get(LoggerFactory::class)->get(strtolower($category));
+    $logger->log($level, $msg, $data);
+}
 
-    $dir = strtolower($category);
-    $log = new Logger('goletter');
-    $dateFormat = 'Y-m-d H:i:s';
-    $stream = new StreamHandler(BASE_PATH . '/runtime/logs/' . $dir . '/' . date('Y-m-d') . '.log', $level);
-    $output = "%datetime%||%channel%||%level_name%||%message%||%context%\n";
-    $formatter = new LineFormatter($output, $dateFormat);
-    $stream->setFormatter($formatter);
-    $log->pushHandler($stream);
-    $log->log($level, $msg, $data);
+/**
+ * 从Google Sheets URL中提取文件ID和gid
+ *
+ * @param string $url Google Sheets完整URL
+ * @return array 返回 ['file_id' => '', 'gid' => '']，提取失败返回空字符串
+ */
+function extractGoogleSheetsIds($url) {
+    $spreadsheetId = '';
+    $gid = '';
+
+    // 提取文件ID
+    if (preg_match('/\/d\/([^\/?#]+)/', $url, $matches)) {
+        $spreadsheetId = $matches[1];
+    }
+
+    // 提取gid
+    if (preg_match('/[?&]gid=(\d+)/', $url, $matches)) {
+        $gid = $matches[1];
+    }
+
+    return [
+        'spreadsheet_id' => $spreadsheetId,
+        'gid' => $gid
+    ];
 }
 
 /**
