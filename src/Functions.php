@@ -280,32 +280,6 @@ function logging(array $data, string $msg = '调试', string $category = 'daily'
 }
 
 /**
- * 从Google Sheets URL中提取文件ID和gid
- *
- * @param string $url Google Sheets完整URL
- * @return array 返回 ['file_id' => '', 'gid' => '']，提取失败返回空字符串
- */
-function extractGoogleSheetsIds($url) {
-    $spreadsheetId = '';
-    $gid = '';
-
-    // 提取文件ID
-    if (preg_match('/\/d\/([^\/?#]+)/', $url, $matches)) {
-        $spreadsheetId = $matches[1];
-    }
-
-    // 提取gid
-    if (preg_match('/[?&]gid=(\d+)/', $url, $matches)) {
-        $gid = $matches[1];
-    }
-
-    return [
-        'spreadsheet_id' => $spreadsheetId,
-        'gid' => $gid
-    ];
-}
-
-/**
  * 雪花ID.
  */
 function snowflakeId(): int
