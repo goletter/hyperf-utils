@@ -23,7 +23,7 @@ use Hyperf\Redis\Redis;
 use Hyperf\Server\ServerFactory;
 use Hyperf\Snowflake\IdGeneratorInterface;
 use Monolog\Formatter\LineFormatter;
-use Monolog\Handler\StreamHandler;
+use Monolog\Handler\RotatingFileHandler;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -32,6 +32,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\SimpleCache\CacheInterface;
 use Ip2Region;
 use Countable;
+
+use function Hyperf\Support\env;
 
 /**
  * 容器实例.
@@ -273,20 +275,33 @@ function getRegion($lastIp): array
  */
 function logging(array $data, string $msg = '调试', string $category = 'daily', int $level = 200): void
 {
+    // 常驻进程内按 分类+级别 复用 Logger，避免每次写日志都重新打开文件
+    static $loggers = [];
+
     $traceId = (string) Context::get('trace_id', '');
     if ($traceId !== '') {
         $data['trace_id'] = $traceId;
     }
 
     $dir = strtolower($category);
-    $log = new Logger('goletter');
-    $dateFormat = 'Y-m-d H:i:s';
-    $stream = new StreamHandler(BASE_PATH . '/runtime/logs/' . $dir . '/' . date('Y-m-d') . '.log', $level);
-    $output = "%datetime%||%channel%||%level_name%||%message%||%context%\n";
-    $formatter = new LineFormatter($output, $dateFormat);
-    $stream->setFormatter($formatter);
-    $log->pushHandler($stream);
-    $log->log($level, $msg, $data);
+    $key = $dir . ':' . $level;
+
+    if (! isset($loggers[$key])) {
+        $basePath = rtrim((string) (env('LOG_PATH') ?: BASE_PATH . '/runtime/logs'), '/');
+        $maxFiles = (int) env('LOG_MAX_FILES', 30);
+
+        // {LOG_PATH}/{category}/{category}-Y-m-d.log，超过 LOG_MAX_FILES 天自动清理（0 表示不清理）
+        $handler = new RotatingFileHandler("{$basePath}/{$dir}/{$dir}.log", $maxFiles, $level);
+        $handler->setFormatter(new LineFormatter(
+            "%datetime%||%channel%||%level_name%||%message%||%context%\n",
+            'Y-m-d H:i:s',
+            true
+        ));
+
+        $loggers[$key] = new Logger('goletter', [$handler]);
+    }
+
+    $loggers[$key]->log($level, $msg, $data);
 }
 
 /**
