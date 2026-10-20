@@ -18,12 +18,10 @@ use Hyperf\Context\Context;
 use Hyperf\Context\RequestContext;
 use Hyperf\Contract\ConfigInterface;
 use Hyperf\Contract\StdoutLoggerInterface;
-use Hyperf\Logger\Logger;
+use Hyperf\Logger\LoggerFactory;
 use Hyperf\Redis\Redis;
 use Hyperf\Server\ServerFactory;
 use Hyperf\Snowflake\IdGeneratorInterface;
-use Monolog\Formatter\LineFormatter;
-use Monolog\Handler\RotatingFileHandler;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -32,8 +30,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\SimpleCache\CacheInterface;
 use Ip2Region;
 use Countable;
-
-use function Hyperf\Support\env;
 
 /**
  * 容器实例.
@@ -283,25 +279,8 @@ function logging(array $data, string $msg = '调试', string $category = 'daily'
         $data['trace_id'] = $traceId;
     }
 
-    $dir = strtolower($category);
-    $key = $dir . ':' . $level;
-
-    if (! isset($loggers[$key])) {
-        $basePath = rtrim((string) (env('LOG_PATH') ?: BASE_PATH . '/runtime/logs'), '/');
-        $maxFiles = (int) env('LOG_MAX_FILES', 30);
-
-        // {LOG_PATH}/{category}/{category}-Y-m-d.log，超过 LOG_MAX_FILES 天自动清理（0 表示不清理）
-        $handler = new RotatingFileHandler("{$basePath}/{$dir}/{$dir}.log", $maxFiles, $level);
-        $handler->setFormatter(new LineFormatter(
-            "%datetime%||%channel%||%level_name%||%message%||%context%\n",
-            'Y-m-d H:i:s',
-            true
-        ));
-
-        $loggers[$key] = new Logger('goletter', [$handler]);
-    }
-
-    $loggers[$key]->log($level, $msg, $data);
+    $logger = ApplicationContext::getContainer()->get(LoggerFactory::class)->get(strtolower($category));
+    $logger->log($level, $msg, $data);
 }
 
 /**
